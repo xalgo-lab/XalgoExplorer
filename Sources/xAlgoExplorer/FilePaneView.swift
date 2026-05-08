@@ -278,14 +278,14 @@ struct FilePaneView: View {
             } else {
                 switch pane.viewMode {
                 case .list:
-                    ResizableListPaneView(pane: pane, role: role)
+                    AppKitTablePaneView(pane: pane, role: role)
                 case .files:
-                    FileGridView(pane: pane, role: role)
+                    AppKitCollectionPaneView(pane: pane, role: role, previewStyle: false)
                 case .preview:
                     if pane.id == .main {
-                        PreviewGridView(pane: pane)
+                        AppKitCollectionPaneView(pane: pane, role: role, previewStyle: true)
                     } else {
-                        FileGridView(pane: pane, role: role)
+                        AppKitCollectionPaneView(pane: pane, role: role, previewStyle: false)
                     }
                 }
             }

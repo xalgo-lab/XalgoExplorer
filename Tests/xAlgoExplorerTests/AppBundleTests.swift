@@ -54,10 +54,34 @@ final class AppBundleTests: XCTestCase {
             encoding: .utf8
         )
 
-        XCTAssertEqual(AppMetadata.version, "v0.1.1-candidate")
-        XCTAssertTrue(appScript.contains("<string>v0.1.1-candidate</string>"))
-        XCTAssertTrue(dmgScript.contains("VERSION=\"v0.1.1-candidate\""))
+        XCTAssertEqual(AppMetadata.version, "v0.1.2-candidate")
+        XCTAssertTrue(appScript.contains("<string>v0.1.2-candidate</string>"))
+        XCTAssertTrue(appScript.contains("<string>2</string>"))
+        XCTAssertTrue(dmgScript.contains("VERSION=\"v0.1.2-candidate\""))
         XCTAssertTrue(dmgScript.contains("xAlgo_Explorer_${VERSION}_${ARCH_NAME}.dmg"))
+    }
+
+    func testCandidateChangelogContainsMultilingualReleaseNotes() throws {
+        let changelog = try String(
+            contentsOf: repositoryRoot().appendingPathComponent("CHANGELOG.md"),
+            encoding: .utf8
+        )
+
+        for marker in [
+            "## v0.1.2-candidate - 2026-05-08",
+            "### 简体中文",
+            "### 繁體中文",
+            "### English",
+            "### 日本語",
+            "### 한국어",
+            "### Français",
+            "### Deutsch",
+            "### Español",
+            "### Português",
+            "### Русский"
+        ] {
+            XCTAssertTrue(changelog.contains(marker), "Missing changelog marker: \(marker)")
+        }
     }
 
     private func repositoryRoot() -> URL {

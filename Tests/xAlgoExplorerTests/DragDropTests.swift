@@ -81,6 +81,91 @@ final class DragDropTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: target.appendingPathComponent("sample.txt").path))
     }
 
+    func testAppKitPasteboardDragWritesInternalPayloadAndFileURL() throws {
+        let root = FileManager.default
+            .temporaryDirectory
+            .appendingPathComponent("xAlgoExplorerDragDropTests-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: root)
+        }
+
+        let file = root.appendingPathComponent("sample.txt")
+        try Data("drag test".utf8).write(to: file)
+
+        let model = ExplorerModel()
+        let item = dragPasteboardItem(for: file, in: root, model: model)
+
+        XCTAssertEqual(item.string(forType: .fileURL), file.absoluteString)
+        XCTAssertNotNil(item.data(forType: NSPasteboard.PasteboardType(UTType.xAlgoInternalFileDrag.identifier)))
+    }
+
+    func testAppKitMultiItemPasteboardDragWritesEachFileURL() throws {
+        let root = FileManager.default
+            .temporaryDirectory
+            .appendingPathComponent("xAlgoExplorerDragDropTests-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: root)
+        }
+
+        let first = root.appendingPathComponent("first.txt")
+        let second = root.appendingPathComponent("second.txt")
+        try Data("first".utf8).write(to: first)
+        try Data("second".utf8).write(to: second)
+
+        let model = ExplorerModel()
+        let pane = PaneState(id: .main, url: root, viewMode: .list, sortField: .name, sortAscending: true)
+        pane.entries = [first, second].map { url in
+            FileEntry(
+                url: url,
+                name: url.lastPathComponent,
+                isDirectory: false,
+                isPackage: false,
+                modified: nil,
+                created: nil,
+                size: 5,
+                typeDescription: "text",
+                typeIdentifier: nil
+            )
+        }
+        pane.selectedIDs = Set(pane.entries.map(\.id))
+
+        let firstItem = model.dragPasteboardItem(for: pane.entries[0], in: pane)
+        let secondItem = model.dragPasteboardItem(for: pane.entries[1], in: pane)
+
+        XCTAssertEqual(firstItem.string(forType: .fileURL), first.absoluteString)
+        XCTAssertEqual(secondItem.string(forType: .fileURL), second.absoluteString)
+    }
+
+    func testAppKitPasteboardInternalDropMovesItemIntoTargetDirectory() throws {
+        let root = FileManager.default
+            .temporaryDirectory
+            .appendingPathComponent("xAlgoExplorerDragDropTests-\(UUID().uuidString)")
+        let source = root.appendingPathComponent("source")
+        let target = root.appendingPathComponent("target")
+        try FileManager.default.createDirectory(at: source, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: target, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: root)
+        }
+
+        let file = source.appendingPathComponent("sample.txt")
+        try Data("drag test".utf8).write(to: file)
+
+        let model = ExplorerModel()
+        let item = dragPasteboardItem(for: file, in: source, model: model)
+        let pasteboard = NSPasteboard(name: NSPasteboard.Name("xAlgoExplorerDragDropTests-\(UUID().uuidString)"))
+        pasteboard.clearContents()
+        XCTAssertTrue(pasteboard.writeObjects([item]))
+
+        XCTAssertEqual(model.dropOperation(from: pasteboard, into: target, intent: .automatic), .move)
+        XCTAssertTrue(model.handleDrop(from: pasteboard, into: target))
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: file.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: target.appendingPathComponent("sample.txt").path))
+    }
+
     func testForceCopyInsideSameDirectoryCreatesDuplicate() async throws {
         let root = FileManager.default
             .temporaryDirectory
@@ -259,5 +344,33 @@ final class DragDropTests: XCTestCase {
         )
         pane.entries = [entry]
         return model.dragProvider(for: entry, in: pane)
+    }
+
+    private func dragPasteboardItem(
+        for url: URL,
+        in directory: URL,
+        model: ExplorerModel,
+        isDirectory: Bool = false
+    ) -> NSPasteboardItem {
+        let pane = PaneState(
+            id: .main,
+            url: directory,
+            viewMode: .list,
+            sortField: .name,
+            sortAscending: true
+        )
+        let entry = FileEntry(
+            url: url,
+            name: url.lastPathComponent,
+            isDirectory: isDirectory,
+            isPackage: false,
+            modified: nil,
+            created: nil,
+            size: isDirectory ? nil : 9,
+            typeDescription: isDirectory ? "folder" : "text",
+            typeIdentifier: nil
+        )
+        pane.entries = [entry]
+        return model.dragPasteboardItem(for: entry, in: pane)
     }
 }

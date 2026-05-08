@@ -536,6 +536,16 @@ struct CommandSurfaceView: View {
                     searchFocused = false
                 }
             }
+            .onChange(of: model.paneInteractionRevision) { _, _ in
+                if searchFocused {
+                    searchFocused = false
+                }
+                DispatchQueue.main.async {
+                    if NSApp.keyWindow?.firstResponder is NSTextView {
+                        NSApp.keyWindow?.makeFirstResponder(nil)
+                    }
+                }
+            }
 
             Button {
                 model.toggleAssist()
