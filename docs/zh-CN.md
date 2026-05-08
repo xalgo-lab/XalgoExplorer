@@ -16,9 +16,25 @@ XalgoExplorer 是一款 macOS 原生文件管理器，重点面向从 Windows �
 
 ## 候选版本
 
-`0.1.0-candidate` 面向 Apple Silicon macOS 14 或更高版本。
+`v0.1.1-candidate` 面向 Apple Silicon macOS 14 或更高版本。
 
 在 GitHub Releases 下载 DMG，打开后将 `xAlgo Explorer.app` 拖入 `Applications` 即可。
+
+## 版本说明
+
+### v0.1.1-candidate
+
+- 修复内部拖拽取消后残留旧 payload 的问题，避免后续拖放误移动旧文件。
+- 增加重命名安全校验，拒绝 `../file`、`a/b` 等跨目录或路径分隔输入。
+- 剪切后粘贴回原目录改为 no-op，不再静默生成重复文件名。
+- 增加系统剪贴板文件 URL 支持，可与 Finder 互相复制、粘贴文件。
+- 搜索框增加明确关闭按钮和 Escape 关闭逻辑，释放焦点后方向键可继续导航文件列表。
+- 移除硬编码的假网络设备，真实发现实现前显示空网络状态。
+- 同步更新候选版本元数据、DMG 命名、README 说明和回归测试。
+
+### v0.1.0-candidate
+
+首次公开候选版本，包含 macOS 原生文件管理器框架、多窗口浏览、拖拽文件操作、键盘导航、多语言提示和 Apple Silicon 签名 DMG 打包。
 
 ## 许可证
 

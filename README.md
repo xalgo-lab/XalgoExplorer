@@ -26,6 +26,8 @@ The latest candidate build is published on the GitHub Releases page:
 
 ## Version Notes
 
+Localized version notes are also available in the language documents listed below.
+
 ### v0.1.1-candidate
 
 This candidate focuses on file-operation safety, packaging hygiene, and UI reliability:

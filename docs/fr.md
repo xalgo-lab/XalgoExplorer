@@ -16,9 +16,25 @@ Il conserve des habitudes de gestion de fichiers directes et visibles, tout en r
 
 ## Version candidate
 
-`0.1.0-candidate` cible Apple Silicon macOS 14 ou version ulterieure.
+`v0.1.1-candidate` cible Apple Silicon macOS 14 ou version ulterieure.
 
 Telechargez le DMG depuis GitHub Releases, puis faites glisser `xAlgo Explorer.app` vers `Applications`.
+
+## Notes de version
+
+### v0.1.1-candidate
+
+- Corrige les anciennes donnees de glisser-deposer interne afin qu'un glisser annule ne puisse pas deplacer le mauvais fichier plus tard.
+- Ajoute une validation du renommage et rejette les entrees dangereuses comme `../file` ou `a/b`.
+- Le collage d'un fichier coupe dans son dossier d'origine devient un no-op au lieu de creer un doublon.
+- Ajoute la copie et le collage de fichiers compatibles Finder via le presse-papiers systeme.
+- Ajoute un bouton de fermeture de recherche et la gestion de Escape afin que les fleches reviennent a la navigation dans la liste de fichiers.
+- Supprime le faux appareil reseau code en dur et affiche un etat reseau vide jusqu'a l'implementation de la vraie detection.
+- Met a jour les metadonnees candidates, le nom du DMG, les notes README et les tests de regression.
+
+### v0.1.0-candidate
+
+Premiere version candidate publique avec interface native macOS, navigation a plusieurs panneaux, glisser-deposer de fichiers, navigation clavier, infobulles multilingues et DMG signe pour Apple Silicon.
 
 ## Licence
 
