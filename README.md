@@ -19,14 +19,29 @@ Many Windows users moving to macOS miss a file manager that feels direct, visibl
 
 The latest candidate build is published on the GitHub Releases page:
 
-- Version: `v0.1.1-candidate`
+- Version: `v0.1.2-candidate`
 - Platform: Apple Silicon macOS
 - Minimum macOS: 14.0
-- Package: `xAlgo_Explorer_v0.1.1-candidate_aarch64.dmg`
+- Package: `xAlgo_Explorer_v0.1.2-candidate_aarch64.dmg`
+- Release: [v0.1.2-candidate](https://github.com/xalgo-lab/XalgoExplorer/releases/tag/v0.1.2-candidate)
+- Release notes: [docs/releases/v0.1.2-candidate.md](docs/releases/v0.1.2-candidate.md)
+- SHA256: `10433f659dc514c3015d1837dd85c18caf572f2afd5fc9cc6c4ba922f774fdc1`
 
 ## Version Notes
 
-Localized version notes are also available in the language documents listed below.
+Localized version notes are also available in the release notes and language documents listed below.
+
+### v0.1.2-candidate
+
+This candidate moves the file area to native macOS AppKit controls while keeping the existing SwiftUI shell and product behavior:
+
+- Replaced the list file area with `NSTableView`.
+- Replaced file and preview grid areas with `NSCollectionView`.
+- Kept `ExplorerModel` as the single source of truth for paths, selection, sorting, drag/drop rules, clipboard behavior, and pane focus.
+- Improved column resizing, header sorting, keyboard selection, focus routing, and three-pane file-area stability.
+- Fixed keyboard selection scrolling so the active selection is automatically brought into view.
+- Fixed AppKit drag pasteboard handling for internal drags, multi-file drags, and Finder-style copy/move behavior.
+- Added regression coverage for AppKit file-area selection, drag pasteboard behavior, keyboard scrolling, and candidate release metadata.
 
 ### v0.1.1-candidate
 
