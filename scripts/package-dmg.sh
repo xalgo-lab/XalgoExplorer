@@ -5,10 +5,10 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 APP_DIR="$ROOT_DIR/dist/xAlgo Explorer.app"
 INFO_PLIST="$APP_DIR/Contents/Info.plist"
 STAGE_DIR="$ROOT_DIR/dist/dmg-root"
-VERSION="0.1.0"
+VERSION="v0.1.1-candidate"
 ARCH_NAME="aarch64"
 VOL_NAME="xAlgo Explorer"
-DMG_PATH="$ROOT_DIR/dist/xAlgo_Explorer_${VERSION}_candidate_${ARCH_NAME}.dmg"
+DMG_PATH="$ROOT_DIR/dist/xAlgo_Explorer_${VERSION}_${ARCH_NAME}.dmg"
 CHECKSUM_PATH="$DMG_PATH.sha256"
 
 if [[ ! -d "$APP_DIR" ]]; then
@@ -31,7 +31,7 @@ case "$(uname -m)" in
   x86_64) ARCH_NAME="x86_64" ;;
 esac
 
-DMG_PATH="$ROOT_DIR/dist/xAlgo_Explorer_${VERSION}_candidate_${ARCH_NAME}.dmg"
+DMG_PATH="$ROOT_DIR/dist/xAlgo_Explorer_${VERSION}_${ARCH_NAME}.dmg"
 CHECKSUM_PATH="$DMG_PATH.sha256"
 
 rm -rf "$STAGE_DIR" "$DMG_PATH" "$CHECKSUM_PATH"

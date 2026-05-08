@@ -17,12 +17,30 @@ Many Windows users moving to macOS miss a file manager that feels direct, visibl
 
 ## Candidate Build
 
-The first candidate build is published on the GitHub Releases page:
+The latest candidate build is published on the GitHub Releases page:
 
-- Version: `0.1.0-candidate`
+- Version: `v0.1.1-candidate`
 - Platform: Apple Silicon macOS
 - Minimum macOS: 14.0
-- Package: `xAlgo_Explorer_0.1.0_candidate_aarch64.dmg`
+- Package: `xAlgo_Explorer_v0.1.1-candidate_aarch64.dmg`
+
+## Version Notes
+
+### v0.1.1-candidate
+
+This candidate focuses on file-operation safety, packaging hygiene, and UI reliability:
+
+- Fixed stale internal drag payload handling so a cancelled drag cannot hijack a later file drop.
+- Added rename validation for path traversal and path separators, preventing names like `../file` or `a/b` from becoming cross-directory moves.
+- Changed cut-and-paste back into the original directory to a no-op instead of silently creating duplicate names.
+- Added Finder-compatible system pasteboard support for copying and pasting file URLs between Finder and xAlgo Explorer.
+- Added a clear close path for search and released search focus so arrow-key navigation returns to the file list.
+- Replaced the hardcoded network device placeholder with an empty network discovery state until real discovery is implemented.
+- Updated the candidate version metadata and packaged DMG naming to `v0.1.1-candidate`.
+
+### v0.1.0-candidate
+
+Initial public candidate with the native macOS file manager shell, multi-pane layout, icon rail, localized tooltips, drag-and-drop file operations, keyboard navigation, and signed Apple Silicon app/DMG packaging.
 
 ## Build From Source
 

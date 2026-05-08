@@ -1067,7 +1067,9 @@ struct FileContextMenu: View {
 
 struct NetworkPaneView: View {
     @EnvironmentObject private var model: ExplorerModel
-    private let devices = ["TS-416-QK6WQ01"]
+    private var devices: [String] {
+        NetworkDiscovery.discoveredDeviceNames()
+    }
 
     var body: some View {
         ScrollView {
@@ -1105,8 +1107,15 @@ struct NetworkPaneView: View {
     }
 
     private var filteredDevices: [String] {
-        guard !model.searchText.isEmpty else { return devices }
-        return devices.filter { $0.localizedCaseInsensitiveContains(model.searchText) }
+        let query = model.searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return devices }
+        return devices.filter { $0.localizedCaseInsensitiveContains(query) }
+    }
+}
+
+enum NetworkDiscovery {
+    static func discoveredDeviceNames() -> [String] {
+        []
     }
 }
 

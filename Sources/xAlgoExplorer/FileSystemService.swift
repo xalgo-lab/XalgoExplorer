@@ -100,7 +100,12 @@ enum FileSystemService {
     }
 
     static func rename(_ url: URL, to newName: String) throws -> URL {
-        let target = url.deletingLastPathComponent().appendingPathComponent(newName)
+        let validName = try validatedFileName(newName)
+        let parent = url.deletingLastPathComponent().standardizedFileURL
+        let target = parent.appendingPathComponent(validName).standardizedFileURL
+        guard target.deletingLastPathComponent().standardizedFileURL == parent else {
+            throw FileSystemServiceError.invalidFileName(newName)
+        }
         try FileManager.default.moveItem(at: url, to: target)
         return target
     }
@@ -113,9 +118,14 @@ enum FileSystemService {
     }
 
     static func move(_ urls: [URL], to directory: URL) throws {
+        let destinationDirectory = directory.standardizedFileURL
         for url in urls {
-            let target = uniqueURL(in: directory, originalName: url.lastPathComponent)
-            try FileManager.default.moveItem(at: url, to: target)
+            let source = url.standardizedFileURL
+            if source.deletingLastPathComponent().standardizedFileURL == destinationDirectory {
+                continue
+            }
+            let target = uniqueURL(in: destinationDirectory, originalName: source.lastPathComponent)
+            try FileManager.default.moveItem(at: source, to: target)
         }
     }
 
@@ -211,6 +221,16 @@ enum FileSystemService {
         }
     }
 
+    private static func validatedFileName(_ name: String) throws -> String {
+        guard !name.isEmpty,
+              name != ".",
+              name != "..",
+              name.rangeOfCharacter(from: CharacterSet(charactersIn: "/:")) == nil else {
+            throw FileSystemServiceError.invalidFileName(name)
+        }
+        return name
+    }
+
     private static func compare<T: Comparable>(_ lhs: T?, _ rhs: T?) -> ComparisonResult {
         switch (lhs, rhs) {
         case let (lhs?, rhs?):
@@ -222,6 +242,17 @@ enum FileSystemService {
             return .orderedDescending
         case (_, nil):
             return .orderedAscending
+        }
+    }
+}
+
+enum FileSystemServiceError: LocalizedError {
+    case invalidFileName(String)
+
+    var errorDescription: String? {
+        switch self {
+        case let .invalidFileName(name):
+            "无效文件名：\(name)"
         }
     }
 }

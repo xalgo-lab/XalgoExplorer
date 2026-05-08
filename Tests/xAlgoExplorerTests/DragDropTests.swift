@@ -153,30 +153,36 @@ final class DragDropTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: root.appendingPathComponent("sample 1.txt").path))
     }
 
-    func testActiveInternalDragDoesNotFallbackToFileURLCopyWhenInternalTypeIsMissing() async throws {
+    func testCancelledInternalDragDoesNotHijackLaterFileURLDrop() async throws {
         let root = FileManager.default
             .temporaryDirectory
             .appendingPathComponent("xAlgoExplorerDragDropTests-\(UUID().uuidString)")
         let source = root.appendingPathComponent("source")
+        let external = root.appendingPathComponent("external")
         let target = root.appendingPathComponent("target")
         try FileManager.default.createDirectory(at: source, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: external, withIntermediateDirectories: true)
         try FileManager.default.createDirectory(at: target, withIntermediateDirectories: true)
         defer {
             try? FileManager.default.removeItem(at: root)
         }
 
-        let file = source.appendingPathComponent("sample.txt")
-        try Data("drag test".utf8).write(to: file)
+        let cancelledFile = source.appendingPathComponent("cancelled.txt")
+        let laterFile = external.appendingPathComponent("later.txt")
+        try Data("cancelled".utf8).write(to: cancelledFile)
+        try Data("later".utf8).write(to: laterFile)
 
         let model = ExplorerModel()
-        _ = dragProvider(for: file, in: source, model: model)
-        let fileURLOnlyProvider = NSItemProvider(item: file as NSURL, typeIdentifier: UTType.fileURL.identifier)
+        _ = dragProvider(for: cancelledFile, in: source, model: model)
+        let fileURLOnlyProvider = NSItemProvider(item: laterFile as NSURL, typeIdentifier: UTType.fileURL.identifier)
 
         XCTAssertTrue(model.handleDrop([fileURLOnlyProvider], into: target))
 
         try await Task.sleep(nanoseconds: 200_000_000)
-        XCTAssertFalse(FileManager.default.fileExists(atPath: file.path))
-        XCTAssertTrue(FileManager.default.fileExists(atPath: target.appendingPathComponent("sample.txt").path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: cancelledFile.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: target.appendingPathComponent("cancelled.txt").path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: laterFile.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: target.appendingPathComponent("later.txt").path))
     }
 
     func testDirectoryCannotBeDroppedIntoItselfOrDescendant() throws {

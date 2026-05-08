@@ -43,6 +43,23 @@ final class AppBundleTests: XCTestCase {
         XCTAssertEqual(AppMetadata.copyright, "Copyright by 8G 2026 xAlgo Inc.")
     }
 
+    func testCandidateVersionMetadataIsSynchronizedWithPackagingScripts() throws {
+        let root = repositoryRoot()
+        let appScript = try String(
+            contentsOf: root.appendingPathComponent("scripts/package-app.sh"),
+            encoding: .utf8
+        )
+        let dmgScript = try String(
+            contentsOf: root.appendingPathComponent("scripts/package-dmg.sh"),
+            encoding: .utf8
+        )
+
+        XCTAssertEqual(AppMetadata.version, "v0.1.1-candidate")
+        XCTAssertTrue(appScript.contains("<string>v0.1.1-candidate</string>"))
+        XCTAssertTrue(dmgScript.contains("VERSION=\"v0.1.1-candidate\""))
+        XCTAssertTrue(dmgScript.contains("xAlgo_Explorer_${VERSION}_${ARCH_NAME}.dmg"))
+    }
+
     private func repositoryRoot() -> URL {
         URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()

@@ -502,19 +502,40 @@ struct CommandSurfaceView: View {
                         .frame(width: 220)
                         .onSubmit {
                             if model.searchText.isEmpty {
-                                model.searchOpen = false
+                                model.closeSearch()
                             }
+                        }
+                        .onExitCommand {
+                            model.closeSearch()
+                            searchFocused = false
                         }
                         .onChange(of: searchFocused) { _, focused in
                             if !focused && model.searchText.isEmpty {
-                                model.searchOpen = false
+                                model.closeSearch()
                             }
                         }
+
+                    Button {
+                        model.closeSearch()
+                        searchFocused = false
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 24, height: 30)
+                    }
+                    .buttonStyle(IconHoverButtonStyle())
+                    .help("关闭搜索")
                 }
             }
             .frame(height: 40)
             .padding(.horizontal, 5)
             .capsuleSurface()
+            .onChange(of: model.searchOpen) { _, open in
+                if !open {
+                    searchFocused = false
+                }
+            }
 
             Button {
                 model.toggleAssist()
