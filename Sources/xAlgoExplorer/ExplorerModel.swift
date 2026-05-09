@@ -16,6 +16,7 @@ final class ExplorerModel: ObservableObject {
     @Published var language: String
     @Published var searchOpen = false
     @Published var searchText = ""
+    @Published var paneInteractionRevision = 0
     @Published var clipboard: ClipboardPayload?
     @Published var error: ExplorerError?
     @Published var fileInfo: FileInfoSheet?
@@ -24,6 +25,7 @@ final class ExplorerModel: ObservableObject {
     @Published private var hiddenDefaultSidebarTargetIDs: Set<String> = []
     private var activeInternalDragPayload: InternalFileDragPayload?
     private var activeInternalDragExpiresAt: Date?
+    private weak var activeInternalDragProvider: NSItemProvider?
     private var clipboardPasteboardChangeCount: Int?
 
     let thumbnails = ThumbnailCache()
@@ -163,6 +165,7 @@ final class ExplorerModel: ObservableObject {
 
     func setFocus(_ id: PaneID) {
         focusedPaneID = id
+        paneInteractionRevision += 1
     }
 
     func toggleAssist() {
@@ -434,10 +437,9 @@ final class ExplorerModel: ObservableObject {
         }
 
         let now = Date()
-        let wasOnlySelected = pane.selectedIDs == [entry.id]
-        let shouldOpen = wasOnlySelected || (lastClickedEntryID == entry.id && now.timeIntervalSince(lastClickedAt) < 0.9)
+        let shouldOpen = lastClickedEntryID == entry.id
+            && now.timeIntervalSince(lastClickedAt) <= 0.45
         select(entry, in: pane, modifiers: modifiers)
-
         if shouldOpen {
             lastClickedEntryID = nil
             open(entry, in: pane)
@@ -445,6 +447,11 @@ final class ExplorerModel: ObservableObject {
             lastClickedEntryID = entry.id
             lastClickedAt = now
         }
+    }
+
+    func doubleClick(_ entry: FileEntry, in pane: PaneState) {
+        select(entry, in: pane, modifiers: [])
+        open(entry, in: pane)
     }
 
     func selectAllFocused() {
@@ -743,7 +750,8 @@ final class ExplorerModel: ObservableObject {
             paths: draggedURLs.map(\.path)
         )
         activeInternalDragPayload = payload
-        activeInternalDragExpiresAt = Date().addingTimeInterval(60)
+        activeInternalDragExpiresAt = Date().addingTimeInterval(15)
+        activeInternalDragProvider = provider
         if let data = try? JSONEncoder().encode(payload) {
             provider.registerDataRepresentation(
                 forTypeIdentifier: UTType.xAlgoInternalFileDrag.identifier,
@@ -754,6 +762,71 @@ final class ExplorerModel: ObservableObject {
             }
         }
         return provider
+    }
+
+    func dragPasteboardItem(for entry: FileEntry, in pane: PaneState) -> NSPasteboardItem {
+        if !pane.selectedIDs.contains(entry.id) {
+            select(entry, in: pane)
+        }
+
+        let draggedURLs = selectedEntries(in: pane).map(\.url)
+        let payload = InternalFileDragPayload(
+            sourcePaneID: pane.id,
+            paths: draggedURLs.map(\.path)
+        )
+        activeInternalDragPayload = payload
+        activeInternalDragExpiresAt = Date().addingTimeInterval(15)
+        activeInternalDragProvider = nil
+
+        let item = NSPasteboardItem()
+        item.setString(entry.url.absoluteString, forType: .fileURL)
+        item.setString(entry.url.absoluteString, forType: NSPasteboard.PasteboardType(UTType.fileURL.identifier))
+        if let data = try? JSONEncoder().encode(payload) {
+            item.setData(data, forType: NSPasteboard.PasteboardType(UTType.xAlgoInternalFileDrag.identifier))
+        }
+        return item
+    }
+
+    func dropOperation(
+        from pasteboard: NSPasteboard,
+        into directory: URL,
+        intent: FileDropIntent
+    ) -> FileDropOperation? {
+        if let payload = internalDragPayload(from: pasteboard) {
+            return dropOperation(for: payload, into: directory, intent: intent)
+        }
+
+        let sourceURLs = Self.fileURLsFromSystemPasteboard(pasteboard)
+        guard !sourceURLs.isEmpty else { return nil }
+        let operation = Self.preferredDropOperation(
+            sourceURLs: sourceURLs,
+            into: directory,
+            intent: intent
+        )
+        return canPerformDrop(sourceURLs, into: directory, operation: operation) ? operation : nil
+    }
+
+    func handleDrop(
+        from pasteboard: NSPasteboard,
+        into directory: URL,
+        intent: FileDropIntent = .automatic
+    ) -> Bool {
+        if let payload = internalDragPayload(from: pasteboard) {
+            guard let operation = dropOperation(for: payload, into: directory, intent: intent) else {
+                clearActiveInternalDrag()
+                return false
+            }
+            performDropped(payload, into: directory, operation: operation)
+            clearActiveInternalDrag()
+            return true
+        }
+
+        clearActiveInternalDrag()
+
+        let sourceURLs = Self.fileURLsFromSystemPasteboard(pasteboard)
+        guard !sourceURLs.isEmpty else { return false }
+        performDropped(sourceURLs, into: directory, intent: intent)
+        return true
     }
 
     func handleDrop(
@@ -767,7 +840,7 @@ final class ExplorerModel: ObservableObject {
             $0.hasItemConformingToTypeIdentifier(UTType.xAlgoInternalFileDrag.identifier)
         }
         if !internalDragProviders.isEmpty {
-            if let activePayload = freshActiveInternalDragPayload() {
+            if let activePayload = freshActiveInternalDragPayload(matching: internalDragProviders) {
                 guard let operation = dropOperation(for: activePayload, into: directory, intent: intent) else {
                     clearActiveInternalDrag()
                     return false
@@ -825,7 +898,7 @@ final class ExplorerModel: ObservableObject {
             $0.hasItemConformingToTypeIdentifier(UTType.xAlgoInternalFileDrag.identifier)
         }
         if !internalDragProviders.isEmpty {
-            if let activePayload = freshActiveInternalDragPayload() {
+            if let activePayload = freshActiveInternalDragPayload(matching: internalDragProviders) {
                 clearActiveInternalDrag()
                 return navigateToDroppedDirectory(sourceURLs(from: activePayload), in: pane)
             }
@@ -1209,10 +1282,18 @@ final class ExplorerModel: ObservableObject {
         }
     }
 
-    private func freshActiveInternalDragPayload() -> InternalFileDragPayload? {
+    private func freshActiveInternalDragPayload(
+        matching providers: [NSItemProvider]? = nil
+    ) -> InternalFileDragPayload? {
         guard let payload = activeInternalDragPayload,
               let expiresAt = activeInternalDragExpiresAt else {
             return nil
+        }
+        if let providers {
+            guard let activeInternalDragProvider,
+                  providers.contains(where: { $0 === activeInternalDragProvider }) else {
+                return nil
+            }
         }
         if expiresAt < Date() {
             clearActiveInternalDrag()
@@ -1224,6 +1305,16 @@ final class ExplorerModel: ObservableObject {
     private func clearActiveInternalDrag() {
         activeInternalDragPayload = nil
         activeInternalDragExpiresAt = nil
+        activeInternalDragProvider = nil
+    }
+
+    private func internalDragPayload(from pasteboard: NSPasteboard) -> InternalFileDragPayload? {
+        let internalType = NSPasteboard.PasteboardType(UTType.xAlgoInternalFileDrag.identifier)
+        if let data = pasteboard.data(forType: internalType),
+           let payload = try? JSONDecoder().decode(InternalFileDragPayload.self, from: data) {
+            return payload
+        }
+        return freshActiveInternalDragPayload()
     }
 
     private func sourceURLs(from payload: InternalFileDragPayload) -> [URL] {

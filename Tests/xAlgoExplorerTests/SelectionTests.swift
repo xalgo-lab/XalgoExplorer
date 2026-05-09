@@ -106,7 +106,84 @@ final class SelectionTests: XCTestCase {
         )
     }
 
-    private func makePane(entries names: [String]) -> PaneState {
+    func testSingleClickingAlreadySelectedEntryDoesNotOpenDirectory() {
+        let model = ExplorerModel()
+        let pane = makePane(entries: ["folder"], directories: ["folder"])
+        pane.selectedIDs = ["/tmp/folder"]
+        pane.selectionAnchorID = "/tmp/folder"
+        pane.selectionCursorID = "/tmp/folder"
+        let entry = pane.entries[0]
+
+        model.primaryClick(entry, in: pane)
+
+        XCTAssertEqual(pane.url.path, "/tmp")
+        XCTAssertEqual(pane.selectedIDs, ["/tmp/folder"])
+    }
+
+    func testSlowSecondClickingSelectedEntryDoesNotOpenDirectory() {
+        let model = ExplorerModel()
+        let pane = makePane(entries: ["folder"], directories: ["folder"])
+        let entry = pane.entries[0]
+
+        model.primaryClick(entry, in: pane)
+        Thread.sleep(forTimeInterval: 0.55)
+        model.primaryClick(entry, in: pane)
+
+        XCTAssertEqual(pane.url.path, "/tmp")
+        XCTAssertEqual(pane.selectedIDs, ["/tmp/folder"])
+    }
+
+    func testDoubleClickOpensDirectory() {
+        let root = URL(fileURLWithPath: "/tmp")
+        let model = ExplorerModel()
+        let pane = makePane(entries: ["folder"], directories: ["folder"])
+        let entry = pane.entries[0]
+
+        model.doubleClick(entry, in: pane)
+
+        XCTAssertEqual(pane.url.standardizedFileURL, root.appendingPathComponent("folder").standardizedFileURL)
+    }
+
+    func testPaneInteractionRevisionChangesWhenPaneIsClicked() {
+        let model = ExplorerModel()
+        let initialRevision = model.paneInteractionRevision
+
+        model.setFocus(.main)
+
+        XCTAssertGreaterThan(model.paneInteractionRevision, initialRevision)
+    }
+
+    func testAppKitTableScrollTargetFollowsSelectionCursor() {
+        let pane = makePane(entries: ["a.txt", "b.txt", "c.txt"])
+        pane.selectedIDs = ["/tmp/a.txt", "/tmp/b.txt", "/tmp/c.txt"]
+        pane.selectionCursorID = "/tmp/c.txt"
+
+        XCTAssertEqual(
+            AppKitSelectionScrollTarget.tableRow(
+                entries: pane.entries,
+                selectedIDs: pane.selectedIDs,
+                cursorID: pane.selectionCursorID
+            ),
+            2
+        )
+    }
+
+    func testAppKitCollectionScrollTargetFallsBackToSelectedItem() {
+        let pane = makePane(entries: ["a.txt", "b.txt", "c.txt"])
+        pane.selectedIDs = ["/tmp/b.txt"]
+        pane.selectionCursorID = nil
+
+        XCTAssertEqual(
+            AppKitSelectionScrollTarget.collectionIndexPath(
+                entries: pane.entries,
+                selectedIDs: pane.selectedIDs,
+                cursorID: pane.selectionCursorID
+            ),
+            IndexPath(item: 1, section: 0)
+        )
+    }
+
+    private func makePane(entries names: [String], directories: Set<String> = []) -> PaneState {
         let pane = PaneState(
             id: .main,
             url: URL(fileURLWithPath: "/tmp"),
@@ -118,7 +195,7 @@ final class SelectionTests: XCTestCase {
             FileEntry(
                 url: URL(fileURLWithPath: "/tmp").appendingPathComponent(name),
                 name: name,
-                isDirectory: false,
+                isDirectory: directories.contains(name),
                 isPackage: false,
                 modified: nil,
                 created: nil,
